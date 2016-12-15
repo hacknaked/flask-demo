@@ -7,29 +7,30 @@ Requires Docker Engine 1.10+ and Docker Compose 1.6+
 
 ## Clone, setup and run
 
-1. Clone the repo
+Clone the repo
 ```
 $ https://github.com/hacknaked/flask-demo.git
 $ cd flask-demo
 ```
 
-1. Build Docker containers
+Build Docker containers
 ```
 $ docker-compose build
 ```
 
-1. (optional, first time only) Start the database service in first place 
+(optional, first time only) Start the database service in first place 
 in order to build the database, tables, schemas into disk.
  
 ```
 $ docker-compose start postgresql
 ```
-1. Start all services
+
+Start all services
 
 ```
 $ docker-compose up
 ```
-1. Try
+Try
 
 Open a browser and go to http://0.0.0.0:5000  
 
