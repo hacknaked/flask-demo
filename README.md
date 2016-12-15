@@ -18,7 +18,7 @@ Build Docker containers
 $ docker-compose build
 ```
 
-(optional, first time only) Start the database service in first place 
+(first time only) Start the database service in first place 
 in order to build the database, tables, schemas into disk.
  
 ```
