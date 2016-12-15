@@ -1,0 +1,7 @@
+Flask==0.11.1
+Flask_SQLAlchemy==2.1
+GeoAlchemy2==0.4.0
+marshmallow==2.10.4
+psycopg2==2.6.2
+SQLAlchemy==1.1.4
+shapely==1.5.17

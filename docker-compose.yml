@@ -1,0 +1,21 @@
+version: '2'
+services:
+  app:
+    build: ./web
+    image: flask-demo-web
+    depends_on:
+      - postgresql
+    command: /usr/local/bin/python2 run.py
+    env_file:
+      - .env
+    links:
+      - postgresql:postgresql
+    ports:
+      - "5000:5000"
+  postgresql:
+    build: ./postgresql
+    image: flask-demo-postgresql
+    env_file:
+      - .env
+    volumes:
+      - ./postgresql/data:/var/lib/postgresql/data/

@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset=utf-8/>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+        }
+
+        #priority {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+        }
+
+        #target {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            margin-left: -60px;
+            margin-top: -60px;
+            opacity: .7;
+            font-family: "Material Icons";
+            font-size: 120px;
+            color: #607D8B;
+        }
+
+        .ctrl {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+            color: #424242;
+            background: transparent;
+            padding: 10px;
+        }
+
+        .ctrl-info {
+            position: relative;
+        }
+
+        .save {
+            position: absolute;
+            font-size: 40px;
+            bottom: 10px;
+            right: 10px;
+        }
+
+        .button {
+            cursor: pointer;
+            color: #B0BEC5;
+            float: right;
+        }
+
+        .button:hover {
+            color: #607D8B;
+        }
+
+        textarea {
+            padding: 10px;
+            height: 200px;
+            resize: none;
+            font-size: 20px;
+        }
+
+        label {
+            cursor: pointer;
+        }
+
+        strong {
+            color: #f44336
+        }
+    </style>
+    <title>Geo ToDo List</title>
+</head>
+<body>
+<div class="ctrl">
+    <div class="ctrl-info">
+        <textarea id="todo" rows="6" cols="20" maxlength="140" autofocus placeholder="Type something..."></textarea>
+        <form id="priority">
+            <label><input type="radio" name="priority" value="0" onclick="changePriority(this)" checked> Nice to do</label><br>
+            <label><input type="radio" name="priority" value="1" onclick="changePriority(this)"> Important</label><br>
+            <label><input type="radio" name="priority" value="2" onclick="changePriority(this)"> Critical</label>
+        </form>
+        <i class="material-icons save button" onclick="save()">add_circle</i>
+    </div>
+    <small id="status">Geo ToDo List v0.1</small>
+</div>
+<div id="map"></div>
+<i id="target" class="material-icons">my_location</i>
+
+<script src="https://maps.googleapis.com/maps/api/js?&key=AIzaSyDE2EzQKVMzqoG-laVBzOJ35rRlgaVtJuU"></script>
+
+<script>
+var map;
+var markers = {};
+var priorities = [
+    {description: "Nice to do", color: "#607D8B"},
+    {description: "Important", color: "#f44336"},
+    {description: "Critical", color: "#b71c1c"}
+];
+
+
+function setStatus(message) {
+    var template = '<strong>%message</strong>';
+    if (!message) {
+        template = "<span>Geo ToDo List v0.1</span>";
+    }
+    document.getElementById("status").innerHTML = template.replace('%message', message);
+}
+
+function changePriority(p) {
+    document.getElementById("target").style = 'color: %color;'.replace('%color', priorities[p.value].color);
+}
+
+function send(request, path, data, onSuccess) {
+
+    var xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function () {
+        if (xhttp.readyState == 4) {
+            if (xhttp.status >= 200 && xhttp.status <= 204) {
+                onSuccess(JSON.parse(xhttp.response || null));
+                setStatus();
+            }
+            else {
+                setStatus("Error " + xhttp.status + ": " + xhttp.statusText);
+            }
+        }
+        else if (xhttp.readyState == 1) {
+            setStatus("Working...");
+        }
+        else {
+            setStatus("Warning " + xhttp.readyState);
+        }
+    };
+    xhttp.open(request, "api/v1.0" + path, true);
+    xhttp.setRequestHeader("Content-Type", "application/json");
+    xhttp.send(JSON.stringify(data));
+}
+
+function save() {
+    var item = {
+        message: document.getElementById("todo").value,
+        priority: document.querySelector('input[name="priority"]:checked').value,
+        location: map.getCenter()
+    };
+    send('POST', '/tasks/', item, function (result) {
+        item.id = result.id;
+        addMarker(item);
+        document.getElementById("todo").value = '';
+    })
+}
+
+function addMarker(item) {
+    var marker = new google.maps.Marker({
+        position: item.location,
+        map: map,
+        icon: {
+            path: 'M24 4c-7.73 0-14 6.27-14 14 0 10.5 14 26 14 26s14-15.5 14-26c0-7.73-6.27-14-14-14zm0 19c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z',
+            fillColor: priorities[item.priority].color,
+            fillOpacity: 1,
+            strokeWeight: 0,
+            anchor: new google.maps.Point(24, 46)
+        },
+        animation: google.maps.Animation.DROP
+    });
+    marker.item = item;
+    markers[item.id] = marker;
+    google.maps.event.addListener(marker, 'click', function (ev) {
+        var infowindow = new google.maps.InfoWindow({
+            content: makeInfoWindow(marker),
+            maxWidth: 360
+        });
+        infowindow.open(map, marker);
+    });
+}
+
+function removeMarker(domMarker) {
+    var id = domMarker.getAttribute("data-marker");
+    markers[id].setMap(null);
+    send('DELETE', '/tasks/' + id, null, function () {
+        delete markers[id];
+    })
+}
+
+function makeInfoWindow(marker) {
+
+    return '\
+            <div> \
+                  <h3>%priority</h3> \
+                    <p>message: %message</p> \
+                    <p>created: %created</p> \
+                    <br> \
+                    <button title="Delete" data-marker="%marker" onclick="removeMarker(this)"> delete </button> \
+            </div>'
+        .replace('%priority', priorities[marker.item.priority].description)
+        .replace('%message', marker.item.message)
+        .replace('%marker', marker.item.id)
+        .replace('%created', Date(marker.item.date_created))
+}
+
+google.maps.event.addDomListener(window, 'load', function () {
+    console.log("Initializing...");
+    var settings = {
+        zoom: 16,
+        minZoom: 8,
+        maxZoom: 18,
+        mapTypeControl: false,
+        center: {lat: -34.582356, lng: -58.436631},
+        navigationControlOptions: {style: google.maps.NavigationControlStyle.SMALL},
+        mapTypeId: google.maps.MapTypeId.ROADMAP
+    };
+    map = new google.maps.Map(document.getElementById('map'), settings);
+    console.log("Map ready");
+    send('GET', '/tasks/', null, function (response) {
+        for (var i = 0; i < response.length; i++) {
+            addMarker(response[i]);
+        }
+    });
+});
+
+
+</script>
+
+</body>
+</html>
