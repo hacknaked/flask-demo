@@ -9,7 +9,7 @@ Requires Docker Engine 1.10+ and Docker Compose 1.6+
 
 Clone the repo
 ```
-$ https://github.com/hacknaked/flask-demo.git
+$ git clone https://github.com/hacknaked/flask-demo.git
 $ cd flask-demo
 ```
 
